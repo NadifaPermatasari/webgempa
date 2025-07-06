@@ -1,68 +1,104 @@
-
 import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
 import os
 
-# Path untuk menyimpan data bantuan
+# Konfigurasi halaman
+st.set_page_config(page_title="GempaLog.ID", layout="wide")
+st.title("🌐 GempaLog.ID")
+st.subheader("Sistem Bantuan Logistik Bencana Gempa")
+
+# Path penyimpanan data bantuan
 DATA_PATH = "data/bantuan.csv"
 os.makedirs("data", exist_ok=True)
 if not os.path.exists(DATA_PATH):
-    df_init = pd.DataFrame(columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"])
-    df_init.to_csv(DATA_PATH, index=False)
+    pd.DataFrame(columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"]).to_csv(DATA_PATH, index=False)
 
-# Fungsi ambil data gempa dari BMKG
+# Fungsi ambil data gempa terkini
 def ambil_data_gempa_terkini():
+    url = "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"
     try:
-        url = "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"
-        response = requests.get(url)
-        data = response.json()
-        return pd.DataFrame(data["Infogempa"]["gempa"])
-    except Exception as e:
-        st.error("Gagal mengambil data gempa dari BMKG.")
+        response = requests.get(url, timeout=5)
+        data = response.json()["Infogempa"]["gempa"]
+        return pd.DataFrame(data)
+    except:
         return pd.DataFrame()
 
-# Konfigurasi Streamlit
-st.set_page_config(page_title="GempaLog.ID", layout="wide")
-st.title("🌐 GempaLog.ID - Sistem Bantuan Logistik Bencana Gempa")
+# Fungsi ambil data gempa dirasakan
+def ambil_data_gempa_dirasakan():
+    url = "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()["Infogempa"]["gempa"]
+        return pd.DataFrame(data)
+    except:
+        return pd.DataFrame()
 
-# Sidebar navigasi
-menu = st.sidebar.radio("Navigasi", ["🌍 Info Gempa Real-time", "📝 Formulir Bantuan", "📊 Data Bantuan Masuk"])
+# Sidebar menu
+menu = st.sidebar.radio("📌 Navigasi", ["🌍 Info Gempa", "📝 Formulir Bantuan", "📊 Data Bantuan"])
 
-# Halaman 1: Info Gempa Real-time
-if menu == "🌍 Info Gempa Real-time":
-    st.header("🌍 Daftar 5 Gempa Terbaru - Real-time dari BMKG")
-    df_gempa = ambil_data_gempa_terkini()
+# Halaman 1: Info Gempa
+if menu == "🌍 Info Gempa":
+    st.header("📡 Informasi Gempa Real-time dari BMKG")
+    tab1, tab2 = st.tabs(["📄 Gempa Terkini", "🌐 Gempa Dirasakan (Dengan Peta)"])
 
-    if not df_gempa.empty:
-        df_display = df_gempa[["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Potensi"]].head(5)
-        st.dataframe(df_display, use_container_width=True)
-    else:
-        st.warning("Belum ada data gempa tersedia saat ini.")
+    # Tab Gempa Terkini
+    with tab1:
+        df_terkini = ambil_data_gempa_terkini()
+        if not df_terkini.empty:
+            st.dataframe(df_terkini[["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Potensi"]].head(10), use_container_width=True)
+        else:
+            st.warning("Gagal mengambil data gempa terkini.")
+
+    # Tab Gempa Dirasakan
+    with tab2:
+        df_dirasakan = ambil_data_gempa_dirasakan()
+        if not df_dirasakan.empty:
+            df_map = df_dirasakan.copy()
+
+            # Konversi koordinat untuk peta
+            df_map["latitude"] = df_map["Lintang"].str.replace("LS", "").str.replace("LU", "").astype(float)
+            df_map["longitude"] = df_map["Bujur"].str.replace("BT", "").astype(float) * -1
+
+            st.map(df_map[["latitude", "longitude"]], zoom=4)
+
+            # Tampilkan tabel hanya jika kolom tersedia
+            kolom_tampilkan = ["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Dirasakan"]
+            kolom_ada = [k for k in kolom_tampilkan if k in df_map.columns]
+
+            if kolom_ada:
+                st.dataframe(df_map[kolom_ada], use_container_width=True)
+            else:
+                st.info("Data gempa tidak memuat kolom yang dapat ditampilkan.")
+        else:
+            st.warning("Gagal mengambil data gempa dirasakan.")
 
 # Halaman 2: Formulir Bantuan
 elif menu == "📝 Formulir Bantuan":
-    st.header("📝 Formulir Pengisian Bantuan Logistik")
+    st.header("📦 Formulir Pengiriman Bantuan")
     with st.form("form_bantuan"):
-        nama = st.text_input("Nama Pengirim")
-        jenis = st.selectbox("Jenis Bantuan", ["Makanan", "Obat-obatan", "Pakaian", "Tenda", "Lainnya"])
-        jumlah = st.number_input("Jumlah", min_value=1)
-        lokasi = st.text_input("Lokasi Tujuan")
-        submit = st.form_submit_button("Kirim Bantuan")
+        nama = st.text_input("👤 Nama Pengirim")
+        jenis = st.selectbox("📦 Jenis Bantuan", ["Makanan", "Obat-obatan", "Pakaian", "Tenda", "Lainnya"])
+        jumlah = st.number_input("🔢 Jumlah", min_value=1)
+        lokasi = st.text_input("📍 Lokasi Tujuan")
+        submit = st.form_submit_button("📤 Kirim")
 
         if submit:
             waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            new_row = pd.DataFrame([[nama, jenis, jumlah, lokasi, waktu]],
-                                   columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"])
-            new_row.to_csv(DATA_PATH, mode='a', header=False, index=False)
-            st.success("✅ Data bantuan berhasil dikirim.")
+            new_entry = pd.DataFrame([[nama, jenis, jumlah, lokasi, waktu]],
+                                     columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"])
+            new_entry.to_csv(DATA_PATH, mode="a", header=False, index=False)
+            st.success("✅ Data bantuan berhasil disimpan.")
 
 # Halaman 3: Data Bantuan Masuk
-elif menu == "📊 Data Bantuan Masuk":
-    st.header("📊 Data Bantuan yang Telah Masuk")
+elif menu == "📊 Data Bantuan":
+    st.header("📊 Rekap Data Bantuan Masuk")
     if os.path.exists(DATA_PATH):
-        df_bantuan = pd.read_csv(DATA_PATH)
-        st.dataframe(df_bantuan, use_container_width=True)
+        df = pd.read_csv(DATA_PATH)
+        st.dataframe(df, use_container_width=True)
+
+        st.markdown("### 📈 Statistik Bantuan per Jenis")
+        st.bar_chart(df["Jenis Bantuan"].value_counts())
     else:
-        st.info("Belum ada data bantuan masuk.")
+        st.info("Belum ada data bantuan.")
