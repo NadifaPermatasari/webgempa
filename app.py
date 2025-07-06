@@ -9,12 +9,11 @@ import base64
 # Konfigurasi halaman
 st.set_page_config(page_title="GempaLog.ID", layout="wide")
 
-# Fungsi background gambar sebagai base64
-def set_background(image_file):
-    with open(image_file, "rb") as f:
+# Fungsi untuk set background image sesuai halaman
+def set_background(image_path):
+    with open(image_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <style>
         .stApp {{
             background-image: url("data:image/jpg;base64,{encoded}");
@@ -23,34 +22,34 @@ def set_background(image_file):
             background-attachment: fixed;
         }}
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-# CSS kotak transparan
-def add_transparent_container_style():
-    st.markdown(
-        """
+# CSS transparan elegan
+def add_transparent_css():
+    st.markdown("""
         <style>
         .transparent-box {
-            background-color: rgba(255, 255, 255, 0.88);
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
-            margin-bottom: 2rem;
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 2.5rem;
+            border-radius: 20px;
+            max-width: 1000px;
+            margin: 2rem auto;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.25);
+        }
+        .transparent-box h2, .transparent-box h3 {
+            text-align: center;
+            color: #1f2937;
         }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-# Setup awal
+# Inisialisasi data jika belum ada
 DATA_PATH = "data/bantuan.csv"
 os.makedirs("data", exist_ok=True)
 if not os.path.exists(DATA_PATH):
     pd.DataFrame(columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"]).to_csv(DATA_PATH, index=False)
 
-# Fungsi ambil data BMKG
+# Fungsi ambil data gempa BMKG
 def ambil_data_gempa_terkini():
     try:
         r = requests.get("https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json", timeout=5)
@@ -65,10 +64,10 @@ def ambil_data_gempa_dirasakan():
     except:
         return pd.DataFrame()
 
-# Sidebar
+# Sidebar menu
 menu = st.sidebar.radio("📌 Navigasi", ["🌍 Info Gempa", "📝 Formulir Bantuan", "📊 Data Bantuan"])
 
-# Pasang background sesuai halaman
+# Background sesuai halaman
 if menu == "🌍 Info Gempa":
     set_background("assets/gempa.jpg")
 elif menu == "📝 Formulir Bantuan":
@@ -76,54 +75,51 @@ elif menu == "📝 Formulir Bantuan":
 elif menu == "📊 Data Bantuan":
     set_background("assets/statistik.jpg")
 
-# Pasang CSS transparan
-add_transparent_container_style()
+# Tambahkan CSS transparan
+add_transparent_css()
 
-# HEADER utama
+# Header Umum
 with st.container():
     st.markdown('<div class="transparent-box">', unsafe_allow_html=True)
     st.title("🌐 GempaLog.ID")
     st.subheader("Sistem Bantuan Logistik Bencana Gempa")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ================== HALAMAN INFO GEMPA ==================
+# ====================== 🌍 Info Gempa ======================
 if menu == "🌍 Info Gempa":
     with st.container():
         st.markdown('<div class="transparent-box">', unsafe_allow_html=True)
 
         st.header("📡 Informasi Gempa Real-time dari BMKG")
-        tab1, tab2 = st.tabs(["📄 Gempa Terkini", "🌐 Gempa Dirasakan (Dengan Peta)"])
 
-        # Tab 1
-        with tab1:
-            df_terkini = ambil_data_gempa_terkini()
-            if not df_terkini.empty:
-                st.dataframe(df_terkini[["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Potensi"]].head(10), use_container_width=True)
-            else:
-                st.warning("Gagal mengambil data gempa terkini.")
+        df_terkini = ambil_data_gempa_terkini()
+        if not df_terkini.empty:
+            st.subheader("📄 Gempa Terkini")
+            st.dataframe(df_terkini[["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Potensi"]].head(10), use_container_width=True)
+        else:
+            st.warning("Gagal mengambil data gempa terkini.")
 
-        # Tab 2
-        with tab2:
-            df_dirasakan = ambil_data_gempa_dirasakan()
-            if not df_dirasakan.empty:
-                df_map = df_dirasakan.copy()
-                df_map["latitude"] = df_map["Lintang"].str.replace("LS", "").str.replace("LU", "").astype(float)
-                df_map["longitude"] = df_map["Bujur"].str.replace("BT", "").astype(float) * -1
-                st.map(df_map[["latitude", "longitude"]], zoom=4)
+        df_dirasakan = ambil_data_gempa_dirasakan()
+        if not df_dirasakan.empty:
+            st.subheader("🌐 Gempa Dirasakan (Dengan Peta)")
+            df_map = df_dirasakan.copy()
+            df_map["latitude"] = df_map["Lintang"].str.replace("LS", "").str.replace("LU", "").astype(float)
+            df_map["longitude"] = df_map["Bujur"].str.replace("BT", "").astype(float) * -1
+            st.map(df_map[["latitude", "longitude"]], zoom=4)
 
-                kolom = ["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Dirasakan"]
-                st.dataframe(df_map[kolom], use_container_width=True)
-            else:
-                st.warning("Gagal mengambil data gempa dirasakan.")
+            kolom = ["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Dirasakan"]
+            st.dataframe(df_map[kolom], use_container_width=True)
+        else:
+            st.warning("Gagal mengambil data gempa dirasakan.")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ================== HALAMAN FORMULIR BANTUAN ==================
+# ====================== 📝 Formulir Bantuan ======================
 elif menu == "📝 Formulir Bantuan":
     with st.container():
         st.markdown('<div class="transparent-box">', unsafe_allow_html=True)
-        st.header("📦 Formulir Pengiriman Bantuan")
 
+        st.header("📦 Formulir Pengiriman Bantuan")
         with st.form("form_bantuan"):
             nama = st.text_input("👤 Nama Pengirim")
             jenis = st.selectbox("📦 Jenis Bantuan", ["Makanan", "Obat-obatan", "Pakaian", "Tenda", "Lainnya"])
@@ -138,12 +134,14 @@ elif menu == "📝 Formulir Bantuan":
                                          columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"])
                 new_entry.to_csv(DATA_PATH, mode="a", header=False, index=False)
                 st.success("✅ Data bantuan berhasil disimpan.")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ================== HALAMAN DATA BANTUAN ==================
+# ====================== 📊 Data Bantuan ======================
 elif menu == "📊 Data Bantuan":
     with st.container():
         st.markdown('<div class="transparent-box">', unsafe_allow_html=True)
+
         st.header("📊 Rekap Data Bantuan Masuk")
         if os.path.exists(DATA_PATH):
             df = pd.read_csv(DATA_PATH)
@@ -152,4 +150,5 @@ elif menu == "📊 Data Bantuan":
             st.bar_chart(df["Jenis Bantuan"].value_counts())
         else:
             st.info("Belum ada data bantuan.")
+
         st.markdown('</div>', unsafe_allow_html=True)
