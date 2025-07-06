@@ -10,6 +10,22 @@ st.set_page_config(page_title="GempaLog.ID", layout="wide")
 st.title("🌐 GempaLog.ID")
 st.subheader("Sistem Bantuan Logistik Bencana Gempa")
 
+# Fungsi untuk menyetel background per halaman
+def set_background(image_file):
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("{image_file}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 # Path penyimpanan data bantuan
 DATA_PATH = "data/bantuan.csv"
 os.makedirs("data", exist_ok=True)
@@ -39,10 +55,17 @@ def ambil_data_gempa_dirasakan():
 # Sidebar menu
 menu = st.sidebar.radio("📌 Navigasi", ["🌍 Info Gempa", "📝 Formulir Bantuan", "📊 Data Bantuan"])
 
+# Atur background berdasarkan halaman aktif
+if menu == "🌍 Info Gempa":
+    set_background("assets/gempa.jpg")
+elif menu == "📝 Formulir Bantuan":
+    set_background("assets/bantuan.jpg")
+elif menu == "📊 Data Bantuan":
+    set_background("assets/statistik.jpg")
+
 # Halaman 1: Info Gempa
 if menu == "🌍 Info Gempa":
     st.header("📡 Informasi Gempa Real-time dari BMKG")
-    st.image("assets/gempa.jpg", use_container_width=True, caption="Data Gempa Real-time dari BMKG")
     tab1, tab2 = st.tabs(["📄 Gempa Terkini", "🌐 Gempa Dirasakan (Dengan Peta)"])
 
     # Tab Gempa Terkini
@@ -79,7 +102,6 @@ if menu == "🌍 Info Gempa":
 # Halaman 2: Formulir Bantuan
 elif menu == "📝 Formulir Bantuan":
     st.header("📦 Formulir Pengiriman Bantuan")
-    st.image("assets/bantuan.jpg", use_container_width=True, caption="Bantu saudara kita yang terdampak gempa")
     with st.form("form_bantuan"):
         nama = st.text_input("👤 Nama Pengirim")
         jenis = st.selectbox("📦 Jenis Bantuan", ["Makanan", "Obat-obatan", "Pakaian", "Tenda", "Lainnya"])
@@ -98,7 +120,6 @@ elif menu == "📝 Formulir Bantuan":
 # Halaman 3: Data Bantuan Masuk
 elif menu == "📊 Data Bantuan":
     st.header("📊 Rekap Data Bantuan Masuk")
-    st.image("assets/statistik.jpg", use_container_width=True, caption="Distribusi Bantuan Logistik")
     if os.path.exists(DATA_PATH):
         df = pd.read_csv(DATA_PATH)
         st.dataframe(df, use_container_width=True)
