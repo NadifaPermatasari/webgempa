@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
+import pytz
 import os
 
 # Konfigurasi halaman
@@ -57,13 +58,13 @@ if menu == "🌍 Info Gempa":
         if not df_dirasakan.empty:
             df_map = df_dirasakan.copy()
 
-            # Konversi koordinat untuk peta
+            # Konversi koordinat
             df_map["latitude"] = df_map["Lintang"].str.replace("LS", "").str.replace("LU", "").astype(float)
             df_map["longitude"] = df_map["Bujur"].str.replace("BT", "").astype(float) * -1
 
             st.map(df_map[["latitude", "longitude"]], zoom=4)
 
-            # Tampilkan tabel hanya jika kolom tersedia
+            # Tampilkan tabel jika kolom tersedia
             kolom_tampilkan = ["Tanggal", "Jam", "Wilayah", "Magnitude", "Kedalaman", "Dirasakan"]
             kolom_ada = [k for k in kolom_tampilkan if k in df_map.columns]
 
@@ -85,7 +86,8 @@ elif menu == "📝 Formulir Bantuan":
         submit = st.form_submit_button("📤 Kirim")
 
         if submit:
-            waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            zona_wib = pytz.timezone("Asia/Jakarta")
+            waktu = datetime.now(zona_wib).strftime("%Y-%m-%d %H:%M:%S WIB")
             new_entry = pd.DataFrame([[nama, jenis, jumlah, lokasi, waktu]],
                                      columns=["Nama", "Jenis Bantuan", "Jumlah", "Lokasi", "Waktu"])
             new_entry.to_csv(DATA_PATH, mode="a", header=False, index=False)
