@@ -42,6 +42,7 @@ menu = st.sidebar.radio("📌 Navigasi", ["🌍 Info Gempa", "📝 Formulir Bant
 # Halaman 1: Info Gempa
 if menu == "🌍 Info Gempa":
     st.header("📡 Informasi Gempa Real-time dari BMKG")
+    st.image("assets/gempa.jpg", use_container_width=True, caption="Data Gempa Real-time dari BMKG")
     tab1, tab2 = st.tabs(["📄 Gempa Terkini", "🌐 Gempa Dirasakan (Dengan Peta)"])
 
     # Tab Gempa Terkini
@@ -78,6 +79,7 @@ if menu == "🌍 Info Gempa":
 # Halaman 2: Formulir Bantuan
 elif menu == "📝 Formulir Bantuan":
     st.header("📦 Formulir Pengiriman Bantuan")
+    st.image("assets/bantuan.jpg", use_container_width=True, caption="Bantu saudara kita yang terdampak gempa")
     with st.form("form_bantuan"):
         nama = st.text_input("👤 Nama Pengirim")
         jenis = st.selectbox("📦 Jenis Bantuan", ["Makanan", "Obat-obatan", "Pakaian", "Tenda", "Lainnya"])
@@ -96,6 +98,7 @@ elif menu == "📝 Formulir Bantuan":
 # Halaman 3: Data Bantuan Masuk
 elif menu == "📊 Data Bantuan":
     st.header("📊 Rekap Data Bantuan Masuk")
+    st.image("assets/statistik.jpg", use_container_width=True, caption="Distribusi Bantuan Logistik")
     if os.path.exists(DATA_PATH):
         df = pd.read_csv(DATA_PATH)
         st.dataframe(df, use_container_width=True)
